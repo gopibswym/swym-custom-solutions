@@ -29,18 +29,18 @@
         </circle>
       </svg>
     </div>
-    <div id="wishlist-container" class="swymcs-hide-container">
+    <div id="swymcs-wishlist-list-container"></div>
+    <div id="swymcs-wishlist-container" class="swymcs-hide-container">
       {%- if section.settings.swym_wishlist_show_login_banner -%}
         <swym-custom-wishlist-login-to-save></swym-custom-wishlist-login-to-save>
       {%- endif -%}
       {%- if section.settings.swym_wishlist_show_share_button -%}
         <swym-custom-share-wishlist-button data-listid></swym-custom-share-wishlist-button>
       {%- endif -%}
-      <div id="swymcs-wishlist-list-container"></div>
       <div id="swymcs-wishlist-items-container"></div>
     </div>
-    <div id="empty-wishlist-container" class="swymcs-hide-container">
-      <div id="empty-wishlist-container-description">{{ settings.swym_wishlist_empty_description }}</div>
+    <div id="swymcs-empty-wishlist-container" class="swymcs-hide-container">
+      <div id="swymcs-empty-wishlist-container-description">{{ settings.swym_wishlist_empty_description }}</div>
       <a href="/collections/all" id="swymcs-custom-continue-shopping">
         {{- settings.swym_wishlist_empty_action_button_cta -}}
       </a>
@@ -144,16 +144,15 @@
       }
 
       swymWishlistRender(swat) {
-        let wishlistedProducts = [];
-        let timeout = null;
+        let swymcsWishlistedProducts = [];
 
         const swymWishlistElem = this;
         const swymShareWishlistButton = swymWishlistElem.querySelector('swym-custom-share-wishlist-button');
         const wishlistLoaderContainer = swymWishlistElem.querySelector('#swymcs-wishlist-loader');
-        const wishlistContainer = swymWishlistElem.querySelector('#wishlist-container');
+        const wishlistContainer = swymWishlistElem.querySelector('#swymcs-wishlist-container');
         const wishlistListsContainer = swymWishlistElem.querySelector('#swymcs-wishlist-list-container');
         let wishlistItemContainer = swymWishlistElem.querySelector('#swymcs-wishlist-items-container');
-        const wishlistEmptyContainer = swymWishlistElem.querySelector('#empty-wishlist-container');
+        const wishlistEmptyContainer = swymWishlistElem.querySelector('#swymcs-empty-wishlist-container');
 
         let settings = JSON.parse(this.dataset.settings);
         const sectionId = this.dataset.sectionid;
@@ -161,40 +160,57 @@
         showLoader();
         renderWishlist(swat);
 
-        swat.evtLayer.addEventListener(_swat.JSEvents.addedToWishlist, () => {
-          setTimeout(() => renderWishlist(swat), 1000);
+        swat.evtLayer.addEventListener(swat.JSEvents.addedToWishlist, () => {
+          renderWishlist(swat);
         });
 
         function showLoader() {
           wishlistLoaderContainer.classList.remove('swymcs-hide-container');
         }
 
-        function renderWishlist(swat) {
-          let isMultipleWishlist = swat.isCollectionsEnabled();
+        function renderMultipleListOptions(lists) {
+          if (lists.length > 1) {
+            wishlistListsContainer.innerHTML = `
+                        <select class="swymcs-wishlist-list" id="swym-mutliple-list" onchange="_swat.swymWishlistFunctions.onListChange(event, '${sectionId}')">
+                            ${lists
+                              .map((list) => {
+                                return `
+                                <option class="swymcs-wishlist-list-option" id="product-${
+                                  list.lid
+                                }-${sectionId}" data-listid="${list.lid}" value="${list.lid}" ${
+                                  list.lid == swat.swymCustomWishlistSelectedListId ? `selected` : ''
+                                } >${list.lname} (${list.listcontents.length} items) </option>
+                            `;
+                              })
+                              .join('')}
+                        </select>
+                    `;
+          }
+        }
+
+        function fetchWishlist(swat) {
+          const isMultipleWishlist = swat.isCollectionsEnabled();
           let currentWishlist = [];
-          console.log('render multiple wishlist', isMultipleWishlist);
           if (isMultipleWishlist) {
             swat.fetchLists({
               callbackFn: (lists) => {
                 swat.swymCustomWishlistLists = lists;
-                let currentListId = lists && lists[0] && lists[0].lid;
+                let currentListId = swat.swymCustomWishlistSelectedListId || (lists && lists[0] && lists[0].lid);
                 swat.swymCustomWishlistSelectedListId = currentListId;
+
+                let selectedList = swat.swymCustomWishlistLists.find(
+                  (item) => item.lid == swat.swymCustomWishlistSelectedListId
+                );
+
+                currentWishlist = selectedList?.listcontents || (lists && lists[0] && lists[0].listcontents);
+
+                //setting current selected list id to dataset for later use
                 swymWishlistElem.dataset.listid = currentListId;
                 if (swymShareWishlistButton) {
                   swymShareWishlistButton.dataset.listid = currentListId;
                 }
-                currentWishlist = (lists && lists[0] && lists[0].listcontents) || [];
-                wishlistListsContainer.innerHTML = `
-                              <select class="swymcs-wishlist-list" id="swym-mutliple-list" onchange="_swat.swymWishlistFunctions.onListChange(event, '${sectionId}')">
-                                  ${lists
-                                    .map((list) => {
-                                      return `
-                                      <option class="swymcs-wishlist-list-option" id="product-${list.lid}-${sectionId}" data-listid="${list.lid}" value="${list.lid}">${list.lname} (${list.listcontents.length} items) </option>
-                                  `;
-                                    })
-                                    .join('')}
-                              </select>
-                          `;
+
+                renderMultipleListOptions(lists);
                 renderList(currentWishlist, sectionId);
               },
               errorFn: (error) => {
@@ -206,6 +222,10 @@
               renderList(wishlist, sectionId);
             });
           }
+        }
+
+        function renderWishlist(swat) {
+          fetchWishlist(swat);
 
           const swymWishlistFunctions = {
             onListChange: (event, sectionId) => {
@@ -218,6 +238,9 @@
               let currentSelectedWishlist = swat.swymCustomWishlistLists.find((list) => list.lid == currentListId);
               renderList(currentSelectedWishlist.listcontents, sectionId);
             },
+            reRenderWishlist: () => {
+              fetchWishlist(swat);
+            },
           };
           swat.swymWishlistFunctions = {
             ...swat.swymWishlistFunctions,
@@ -226,18 +249,18 @@
         }
 
         async function renderList(list, sectionId) {
-          let wishlist = document.querySelector(`#swymcs-custom-wishlist-${sectionId}`);
+          const wishlist = document.querySelector(`#swymcs-custom-wishlist-${sectionId}`);
           wishlistItemContainer = wishlist.querySelector('#swymcs-wishlist-items-container');
-          let settings = JSON.parse(wishlist.dataset.settings);
+          const settings = JSON.parse(wishlist.dataset.settings);
           if (list && list.length > 0) {
-            wishlistedProducts = await fetchProductData(list);
+            swymcsWishlistedProducts = await fetchProductData(list);
             wishlistItemContainer.innerHTML = '';
-            wishlistedProducts.forEach((listItem) => {
+            swymcsWishlistedProducts.forEach((listItem) => {
               swat.swymWishlistFunctions &&
                 swat.swymWishlistFunctions.renderWishlistItem(sectionId, wishlistItemContainer, listItem, settings);
             });
           } else {
-            wishlistedProducts = [];
+            swymcsWishlistedProducts = [];
           }
           updateUIState();
         }
@@ -256,10 +279,10 @@
 
         function updateUIState() {
           hideLoader();
-          if (wishlistedProducts.length > 0) {
+          if (swymcsWishlistedProducts.length > 0) {
             wishlistContainer.classList.remove('swymcs-hide-container');
             wishlistEmptyContainer.classList.add('swymcs-hide-container');
-          } else if (wishlistedProducts.length === 0) {
+          } else if (swymcsWishlistedProducts.length === 0) {
             wishlistEmptyContainer.classList.remove('swymcs-hide-container');
             wishlistContainer.classList.add('swymcs-hide-container');
           }
@@ -276,13 +299,27 @@
 
 <style id="swymcs-drawer-style">
   /* Style for custom variant drawer */
+  @-webkit-keyframes swymSpinnerRotate {
+    100% { -webkit-transform: rotate(360deg); transform: rotate(360deg) }
+  }
   @keyframes swymSpinnerRotate {
-      100% { transform: rotate(360deg) }
+      100% { -webkit-transform: rotate(360deg); transform: rotate(360deg) }
+  }
+  @-webkit-keyframes swymSpinnerDash {
+      0% { stroke-dasharray: 1,200; stroke-dashoffset: 0 }
+      50% { stroke-dasharray: 89,200; stroke-dashoffset: -35 }
+      100% { stroke-dasharray: 89,200; stroke-dashoffset: -124 }
   }
   @keyframes swymSpinnerDash {
       0% { stroke-dasharray: 1,200; stroke-dashoffset: 0 }
       50% { stroke-dasharray: 89,200; stroke-dashoffset: -35 }
       100% { stroke-dasharray: 89,200; stroke-dashoffset: -124 }
+  }
+  @-webkit-keyframes swymSpinnerColor {
+      0% { stroke: currentColor }
+      40% { stroke: currentColor }
+      66% { stroke: currentColor }
+      80%, 90% { stroke: currentColor}
   }
   @keyframes swymSpinnerColor {
       0% { stroke: currentColor }
@@ -428,8 +465,8 @@
       }
       #swym-wishlist-product--drawer .swym-product-wrapper { max-height: unset; overflow: visible }
       #swym-wishlist-product--drawer .swym-product-options .swym-options--container{ margin-bottom: 7.5px }
-      #swym-wishlist-product--drawer .swym-product-options .swym-option--title { font-size: 14px !important}
-      #swym-wishlist-product--drawer .swym-product-options .swym-option-values { gap: 5px !important}
+      #swym-wishlist-product--drawer .swym-product-options .swym-option--title { font-size: 14px }
+      #swym-wishlist-product--drawer .swym-product-options .swym-option-values { gap: 5px }
       #swym-wishlist-product--drawer .swym-quantity-selector{ margin-block: 10px}
   }
 </style>
@@ -507,13 +544,13 @@
     width: 100%;
   }
 
-  #swymcs-custom-wishlist-{{ section.id }} #empty-wishlist-container {
+  #swymcs-custom-wishlist-{{ section.id }} #swymcs-empty-wishlist-container {
     display: flex;
     flex-direction: column;
     align-items: center;
     padding: 20px;
     margin-bottom: 15px;
-    margin-top: 300px;
+    margin-top: 150px;
     color: rgba(0, 0, 0, 0.90);
     text-align: center;
     text-transform: uppercase;
@@ -628,7 +665,7 @@
                             settings.swym_wishlist_show_addtocart
                               ? `<button class="swymcs-wishlist-add-to-cart-button" data-action="add-to-cart" ${
                                   !(selectedVariant && selectedVariant.available) ? 'disabled' : ''
-                                } onClick="_swat.swymWishlistFunctions.AddItemToCart(this, ${empi}, ${epi}, '${du}')" >${
+                                } >${
                                   selectedVariant
                                     ? selectedVariant.available
                                       ? isInCart
@@ -668,27 +705,41 @@
 
         const ItemRemoveButton = this.querySelector('#swymcs-remove-productBtn');
         const VariantSelect = this.querySelector('.swymcs-wishlist-variant-select');
+        const AddToCartButton = this.querySelector('.swymcs-wishlist-add-to-cart-button');
 
-        ItemRemoveButton &&
-          ItemRemoveButton.addEventListener('click', () => {
-            ProductItem.remove();
+        ItemRemoveButton?.addEventListener('click', () => {
+          ProductItem.remove();
+          if (_swat.isCollectionsEnabled()) {
+            _swat.removeProductFromLists(
+              { epi, empi, du },
+              [_swat.swymCustomWishlistSelectedListId],
+              (response) => {
+                _swat.swymWishlistFunctions.reRenderWishlist();
+              },
+              (error) => {
+                console.error('Error while adding a Product to many Lists', error);
+              }
+            );
+          } else {
             _swat.removeFromWishList({ epi, empi, du }, (data) => {});
-          });
+          }
+        });
 
-        VariantSelect &&
-          VariantSelect.addEventListener('click', () => {
-            console.log('current item', item);
+        VariantSelect?.addEventListener('click', () => {
+          if (this.settings.variant_select_type == 'modal') {
+            const variantSelectModal = document.querySelector(`#swymcs-variant-select-${sectionId}`);
+            _swat.swymWishlistFunctions &&
+              _swat.swymWishlistFunctions.openVariantSelect(variantSelectModal, item, this.settings);
+          } else if (this.settings.variant_select_type == 'drawer') {
+            const drawer = document.getElementById('swym-wishlist-product--drawer');
 
-            if (this.settings.variant_select_type == 'modal') {
-              const variantSelectModal = document.querySelector(`#swymcs-variant-select-${sectionId}`);
-              _swat.swymWishlistFunctions &&
-                _swat.swymWishlistFunctions.openVariantSelect(variantSelectModal, item, this.settings);
-            } else if (this.settings.variant_select_type == 'drawer') {
-              const drawer = document.getElementById('swym-wishlist-product--drawer');
+            drawer._trigger(item);
+          }
+        });
 
-              drawer._trigger(item);
-            }
-          });
+        AddToCartButton?.addEventListener('click', () => {
+          _swat.swymWishlistFunctions.AddItemToCart(AddToCartButton, empi, epi, du);
+        });
       }
     }
     customElements.define('swymcs-custom-wishlist-item', SwymCustomWishlistItem);
@@ -708,7 +759,7 @@
       },
       AddItemToCart: (button, empi, epi, du, qty) => {
         let originalButtonState = button.innerHTML;
-        button.innerHTML = 'Adding..';
+        button.innerHTML = '{{ settings.swym_wishlist_item_cta_addingtocart }}';
         swat.replayAddToCart(
           {
             empi,
@@ -717,7 +768,7 @@
           },
           epi,
           (c) => {
-            button.innerHTML = 'Added to Cart';
+            button.innerHTML = '{{ settings.swym_wishlist_item_cta_addedtocart }}';
             swat.ui.uiRef.showSuccessNotification({
               message: '{{ settings.swym_wishlist_item_addtocart_success_message }}',
             });
@@ -777,7 +828,7 @@
 
   .swymcs-wishlist-image-container .swymcs-wishlist-item-image{
     width: 100%;
-    height: -webkit-fill-available;
+    height: 100%;
     display: flex;
     margin: auto;
     object-fit: contain;
@@ -792,7 +843,7 @@
     text-decoration: none;
     color: black;
     font-size: 12px;
-    font-weight: 500px;
+    font-weight: 500;
   }
 
   .swymcs-wishlist-item-content .swymcs-wishlist-item-title .swymcs-wishlist-item-title-content{
@@ -851,19 +902,19 @@
 
   @media only screen and (max-width: 767px) {
     .swymcs-custom-wishlist-item{
-        width: 48% !important;
+        width: 48%;
     }
   }
 
   @media only screen and (min-width: 768px) and (max-width: 1023px) {
     .swymcs-custom-wishlist-item{
-        width: 32% !important;
+        width: 32%;
     }
   }
 
   @media only screen and (min-width: 1024px) {
     .swymcs-custom-wishlist-item{
-        width: 24% !important;
+        width: 24%;
     }
   }
 </style>
@@ -1034,7 +1085,7 @@
           currentVariantSelect.themesetting = settings;
           currentVariantSelect.open();
         } else {
-          console.warn('variant select modal unavailable');
+          console.warn('variant select modal unavailable, make sure vairant select modal enabled');
         }
       },
       closeVariantSelectModal: () => {
@@ -1050,7 +1101,6 @@
             item.option3 == currentVariantSelect.selectedVariantOptions.option3
         );
         currentVariantSelect.selectedVariant = selectedVariant;
-        console.log('selected variant', selectedVariant);
         currentVariantSelect.selectedVariantId = selectedVariant && selectedVariant.id;
         currentVariantSelect.render();
       },
@@ -1206,7 +1256,6 @@
   }
 
   .swymcs-variant-modal-product-price{
-    padding: 5px 0;
     font-weight: bold;
     padding: 10px;
   }
@@ -1276,6 +1325,9 @@
 </style>
 
 <script>
+  
+  
+  
   
   
   
@@ -1452,6 +1504,7 @@
 
 
 
+
 </script>
 
 <script>
@@ -1460,7 +1513,6 @@
     class SwymCustomWishlistLoginToSave extends HTMLElement {
       constructor() {
         super();
-        console.log('on render wishlist button');
         if (!window.SwymCallbacks) {
           window.SwymCallbacks = [];
         }
@@ -1486,7 +1538,7 @@
 
         const swymShareButton = this.querySelector('#swym-save-list-button');
 
-        swymShareButton.addEventListener('click', onClickloginToSave.bind(this));
+        swymShareButton?.addEventListener('click', onClickloginToSave.bind(this));
 
         function onClickloginToSave(evt) {
           const redirectionUrl = evt.target.getAttribute('data-redirection-url');
@@ -1549,7 +1601,6 @@
     class SwymCustomShareWishlistButton extends HTMLElement {
       constructor() {
         super();
-        console.log('on render wishlist button');
         if (!window.SwymCallbacks) {
           window.SwymCallbacks = [];
         }
@@ -1567,7 +1618,7 @@
                       <div id="swym-share-label-and-input-wrapper">
                       <input id="swym-sender-name" placeholder="{{ settings.swym_share_wishlist_modal_lable_sender_name }}" type="text">
                       <input id="swym-recepient-email" placeholder="{{ settings.swym_share_wishlist_modal_lable_recipent_email }}*" type="email" required="required">
-                      <textarea id="swym-share-message" placeholder="{{ settings.swym_share_wishlist_modal_lable_message }}" type="email"></textarea>
+                      <textarea id="swym-share-message" placeholder="{{ settings.swym_share_wishlist_modal_lable_message }}" type="text"></textarea>
                       <div class="swym-form-help-text">{{ settings.swym_share_wishlist_modal_required_help_text }}</div>
                       </div>
                       <button id="swym-custom-share-submit-button" type="submit">{{ settings.swym_share_wishlist_modal_share_list_button_text }}</button>
@@ -1584,10 +1635,10 @@
         const swymShareCloseButton = this.querySelector('.swym-close');
         const swymShareModalform = this.querySelector('#swym-custom-share-form');
 
-        swymShareButton.addEventListener('click', showShareWishlist.bind(this));
-        swymShareModalContainer.addEventListener('click', closeShareModal.bind(this));
-        swymShareCloseButton.addEventListener('click', closeShareModal.bind(this));
-        swymShareModalform.addEventListener('submit', onShareWishlist.bind(this));
+        swymShareButton?.addEventListener('click', showShareWishlist.bind(this));
+        swymShareModalContainer?.addEventListener('click', closeShareModal.bind(this));
+        swymShareCloseButton?.addEventListener('click', closeShareModal.bind(this));
+        swymShareModalform?.addEventListener('submit', onShareWishlist.bind(this));
 
         function showShareWishlist() {
           swymShareModalContainer.classList.remove('swym-hide-container');
@@ -1641,7 +1692,6 @@
   }
 
   .swym-share-wishlist-button{
-      border: 0px solid transparent;
       padding: 8px;
       cursor: pointer;
       border: 1px solid {{ settings.swym_wishlist_primary_button_color }};

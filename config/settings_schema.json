@@ -1565,6 +1565,12 @@
       },
       {
         "type": "text",
+        "id": "swym_wishlist_item_cta_addingtocart",
+        "label": "Button label Add to cart",
+        "default": "Adding to cart"
+      },
+      {
+        "type": "text",
         "id": "swym_wishlist_item_cta_addedtocart",
         "label": "Button label Added to cart",
         "default": "Added to cart"
@@ -1579,7 +1585,7 @@
         "type": "text",
         "id": "swym_wishlist_item_cta_unavailable",
         "label": "Button label unavailable",
-        "default": "Un Available"
+        "default": "Unavailable"
       },
       {
         "type": "color",
