@@ -1,3 +1,10 @@
+# Swym Custom solutions
+
+This repo is to demonstrate swym custom solutions 
+
+## Solution release 
+1. [swym custom wishlist code](https://github.com/gopibswym/swym-custom-solutions/pull/2) help doc will be updated soon..
+
 # Dawn
 
 [![Build status](https://github.com/shopify/dawn/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Shopify/dawn/actions/workflows/ci.yml?query=branch%3Amain)
