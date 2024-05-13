@@ -191,37 +191,34 @@
         function fetchWishlist(swat) {
           const isMultipleWishlist = swat.isCollectionsEnabled();
           let currentWishlist = [];
-          if (isMultipleWishlist) {
-            swat.fetchLists({
-              callbackFn: (lists) => {
-                swat.swymCustomWishlistLists = lists;
-                let currentListId = swat.swymCustomWishlistSelectedListId || (lists && lists[0] && lists[0].lid);
-                swat.swymCustomWishlistSelectedListId = currentListId;
+          swat.fetchLists({
+            callbackFn: (lists) => {
+              lists = lists.reverse();
+              swat.swymCustomWishlistLists = lists;
+              let currentListId = swat.swymCustomWishlistSelectedListId || (lists && lists[0] && lists[0].lid);
+              swat.swymCustomWishlistSelectedListId = currentListId;
 
-                let selectedList = swat.swymCustomWishlistLists.find(
-                  (item) => item.lid == swat.swymCustomWishlistSelectedListId
-                );
+              let selectedList = swat.swymCustomWishlistLists.find(
+                (item) => item.lid == swat.swymCustomWishlistSelectedListId
+              );
 
-                currentWishlist = selectedList?.listcontents || (lists && lists[0] && lists[0].listcontents);
+              currentWishlist = selectedList?.listcontents || (lists && lists[0] && lists[0].listcontents);
 
-                //setting current selected list id to dataset for later use
-                swymWishlistElem.dataset.listid = currentListId;
-                if (swymShareWishlistButton) {
-                  swymShareWishlistButton.dataset.listid = currentListId;
-                }
+              //setting current selected list id to dataset for later use
+              swymWishlistElem.dataset.listid = currentListId;
+              if (swymShareWishlistButton) {
+                swymShareWishlistButton.dataset.listid = currentListId;
+              }
 
+              if (isMultipleWishlist) {
                 renderMultipleListOptions(lists);
-                renderList(currentWishlist, sectionId);
-              },
-              errorFn: (error) => {
-                console.log('Error while fetching all Lists', error);
-              },
-            });
-          } else {
-            swat.fetch((wishlist) => {
-              renderList(wishlist, sectionId);
-            });
-          }
+              }
+              renderList(currentWishlist, sectionId);
+            },
+            errorFn: (error) => {
+              console.log('Error while fetching all Lists', error);
+            },
+          });
         }
 
         function renderWishlist(swat) {
@@ -1326,6 +1323,18 @@
   
   
   
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
     // script for variant select as drawer 
     if(!customElements.get('swymcs-drawer')){
         class SwymcsDrawer extends HTMLElement{
@@ -1494,6 +1503,18 @@
         customElements.define('swymcs-drawer', SwymcsDrawer);
     }
   
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 </script>
