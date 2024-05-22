@@ -1759,5 +1759,15 @@
         "default": "Sign Up/ Login"
       }
     ]
+  },{
+    "name": "Swym Custom SFL Settings",
+    "settings":[
+      {
+        "type": "text",
+        "id": "swym_sfl_empty_description",
+        "label": "SFL Empty Desciption",
+        "default": "Your SFL is empty."
+      }
+    ]
   }
 ]
