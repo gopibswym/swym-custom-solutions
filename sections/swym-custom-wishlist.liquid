@@ -16,6 +16,9 @@
     data-sectionId="{{ section.id }}"
     data-settings="{{ section.settings | json | escape }}"
   >
+    <div id="swymcs-wishlist-title" class="swymcs-wishlist-title swymcs-hide-container">
+      {{ section.settings.swym_wishlist_title }}
+    </div>
     <div class="swymcs-wishlist-body">
       <div id="swymcs-wishlist-loader" class="swymcs-hide-container">
         <svg
@@ -200,11 +203,14 @@
         const swymTabContainer = swymWishlistPlusElem.querySelector('#swymcs-tab-container');
         const swymTabWishlistButton = swymWishlistPlusElem.querySelector('#swymcs-tab-wishlist');
         const swymTabSFLButton = swymWishlistPlusElem.querySelector('#swymcs-tab-sfl');
+        const swymWishlistTitle = swymWishlistPlusElem.querySelector('#swymcs-wishlist-title');
         const swymTabWishlistContainer = swymWishlistPlusElem.querySelector('swymcs-custom-wishlist');
         const swymTabSFLContainer = swymWishlistPlusElem.querySelector('swymcs-custom-sfl');
 
         if (swat.SaveForLater) {
           swymTabContainer.classList.remove('swymcs-hide-container');
+        } else {
+          swymWishlistTitle.classList.remove('swymcs-hide-container');
         }
         swymTabWishlistButton?.addEventListener('click', () => {
           swymTabWishlistContainer.classList.remove('swymcs-hide-container');
@@ -741,6 +747,13 @@
   }
 
   .swymcs-wishlistplus-tab-container .swymcs-wishlistplus-tab{
+    font-size: 1.5rem;
+    font-weight: bold;
+    cursor: pointer;
+    padding: 10px;
+  }
+
+  .swymcs-wishlist-title{
     font-size: 1.5rem;
     font-weight: bold;
     cursor: pointer;
@@ -1728,9 +1741,6 @@
         }
         customElements.define('swymcs-drawer', SwymcsDrawer);
     }
-
-
-
 
 
 </script>
